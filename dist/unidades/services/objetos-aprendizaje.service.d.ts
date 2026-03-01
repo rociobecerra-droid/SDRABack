@@ -19,4 +19,6 @@ export declare class ObjetosAprendizajeService extends GenericService<ObjetosApr
         downloadUrl: string;
         nombre: string;
     }>;
+    private resolverCloudinaryInfo;
+    private inferResourceType;
 }

@@ -4,7 +4,6 @@ import { ObjetosAprendizaje } from 'src/unidades/entities/objetos_aprendizaje.en
 export class RecomendacionObjetoDto {
     objeto: ObjetosAprendizaje;
     estiloObjeto: EstiloObjeto;
-    compatibilidad: number;
     estilosCompatibles: string[];
 }
 

@@ -10,7 +10,6 @@ import { RecomendacionObjetoDto, ResultadoRecomendacionDto } from './dto/recomen
 
 interface RecomendacionObjeto {
   objeto: ObjetosAprendizaje;
-  compatibilidad: number;
   estilosCompatibles: string[];
 }
 
@@ -146,33 +145,13 @@ export class PerfilFinalInventarioDeFelderService extends GenericService<PerfilF
     return estilos.sort((a, b) => b.puntaje - a.puntaje);
   }
 
-  /**
-   * Calcula el nivel de compatibilidad entre los estilos del estudiante
-   * y los estilos de un objeto de aprendizaje
-   */
-  private calcularCompatibilidad(
-    estilosEstudiante: { estilo: string; puntaje: number }[],
-    estilosObjeto: string[]
-  ): number {
-    let compatibilidad = 0;
-    let pesoTotal = 0;
-
-    estilosEstudiante.forEach((estiloEst, index) => {
-      const peso = 4 - index; // 4, 3, 2, 1 (más peso a estilos dominantes)
-      pesoTotal += peso;
-
-      if (estilosObjeto.includes(estiloEst.estilo)) {
-        const bonusPuntaje = estiloEst.puntaje / 11;
-        compatibilidad += peso * (1 + bonusPuntaje);
-      }
-    });
-
-    return pesoTotal > 0 ? (compatibilidad / (pesoTotal * 2)) * 100 : 0;
-  }
-
-  /**
+    /**
    * Recomienda objetos de aprendizaje para un tema específico
-   * basándose en el perfil del estudiante
+   * basándose en el perfil del estudiante.
+   * 
+   * Busca objetos compatibles con los 4 estilos de aprendizaje del estudiante
+   * (en orden de dominancia), acumulando resultados de todos los estilos
+   * sin duplicar objetos.
    */
   async recomendarObjetosParaTema(
     nroCuenta: number,
@@ -187,7 +166,7 @@ export class PerfilFinalInventarioDeFelderService extends GenericService<PerfilF
       throw new NotFoundException(`No se encontró perfil para el estudiante con número de cuenta ${nroCuenta}`);
     }
 
-    // 2. Extraer estilos del estudiante
+    // 2. Extraer estilos del estudiante (ordenados por puntaje descendente)
     const estilosEstudiante = this.extraerEstilos(perfil);
     const nombresEstilos = estilosEstudiante.map(e => e.estilo);
 
@@ -197,7 +176,6 @@ export class PerfilFinalInventarioDeFelderService extends GenericService<PerfilF
       relations: ['estiloObjeto', 'tema']
     });
 
-    // Si no hay objetos en el tema
     if (objetos.length === 0) {
       return {
         mensaje: 'No hay objetos de aprendizaje disponibles para este tema',
@@ -207,52 +185,44 @@ export class PerfilFinalInventarioDeFelderService extends GenericService<PerfilF
       };
     }
 
+    // 4. Buscar objetos compatibles en los 4 estilos del estudiante (sin duplicados)
+    const objetosEncontradosMap = new Map<number, RecomendacionObjetoDto>();
+    const estilosConResultados: string[] = [];
 
-    // 4. Buscar objetos compatibles por cada estilo en orden de dominancia
-    const objetosEncontrados: RecomendacionObjetoDto[] = [];
-    let estiloUsado: string | null = null;
-
-    for(const estiloInfo of estilosEstudiante) {
+    for (const estiloInfo of estilosEstudiante) {
       const estiloBuscado = estiloInfo.estilo;
-      const objetosCompatibles: RecomendacionObjetoDto[] = [];
+      let encontradosEnEsteEstilo = 0;
 
-      //Buscar objetos que contengan este estilo
       for (const objeto of objetos) {
         if (objeto.estiloObjeto && objeto.estiloObjeto.estilos) {
           const estilosObjeto = objeto.estiloObjeto.estilos;
-        
-          // Verificar si el objeto incluye el estilo buscado
+
           if (estilosObjeto.includes(estiloBuscado)) {
-            const compatibilidad = this.calcularCompatibilidad(estilosEstudiante, estilosObjeto);
+            // Evitar duplicados: si ya fue agregado, no volvemos a insertarlo
+            if (!objetosEncontradosMap.has(objeto.id)) {
+              const estilosCompatibles = estilosEstudiante
+                .filter(e => estilosObjeto.includes(e.estilo))
+                .map(e => e.estilo);
 
-            const estilosCompatibles = estilosEstudiante
-              .filter(e => estilosObjeto.includes(e.estilo))
-              .map(e => e.estilo);
-
-            objetosCompatibles.push({
-              objeto,
-              estiloObjeto: objeto.estiloObjeto,
-              compatibilidad,
-              estilosCompatibles
-            });
+              objetosEncontradosMap.set(objeto.id, {
+                objeto,
+                estiloObjeto: objeto.estiloObjeto,
+                estilosCompatibles
+              });
+            }
+            encontradosEnEsteEstilo++;
           }
         }
       }
 
-      //Si encontramos objetos con este estilo, los usamos y salimos del ciclo
-      if (objetosCompatibles.length > 0) {
-        objetosEncontrados.push(...objetosCompatibles);
-        estiloUsado = estiloBuscado;
-        break;
+      if (encontradosEnEsteEstilo > 0) {
+        estilosConResultados.push(estiloBuscado);
       }
     }
 
+    const objetosEncontrados = Array.from(objetosEncontradosMap.values());
 
-    // 6. Ordenar por compatibilidad y tomar solo el mejor
-    objetosEncontrados.sort((a, b) => b.compatibilidad - a.compatibilidad);
-    
-
-    // 7. Preparar respuesta con el mejor objeto
+    // 5. Preparar respuesta
     if (objetosEncontrados.length === 0) {
       return {
         mensaje: `No se encontraron objetos de aprendizaje compatibles con tus estilos de aprendizaje.`,
@@ -263,7 +233,7 @@ export class PerfilFinalInventarioDeFelderService extends GenericService<PerfilF
     }
 
     return {
-      mensaje: `Se encontraron ${objetosEncontrados.length} objeto(s) de aprendizaje compatible(s) con tu estilo (${estiloUsado})`,
+      mensaje: `Se encontraron ${objetosEncontrados.length} objeto(s) de aprendizaje compatible(s) con tus estilos (${estilosConResultados.join(', ')})`,
       objetos: objetosEncontrados,
       totalCompatibles: objetosEncontrados.length,
       estilosEstudiante: nombresEstilos

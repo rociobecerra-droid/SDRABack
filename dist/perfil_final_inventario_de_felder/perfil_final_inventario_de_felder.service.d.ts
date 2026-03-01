@@ -17,6 +17,5 @@ export declare class PerfilFinalInventarioDeFelderService extends GenericService
     find(options?: FindManyOptions<PerfilFinalInventarioDeFelder>): Promise<PerfilFinalInventarioDeFelder[]>;
     findModaEstrategiasByNumGrupo(numGrupo: number): Promise<string[]>;
     private extraerEstilos;
-    private calcularCompatibilidad;
     recomendarObjetosParaTema(nroCuenta: number, idTema: number): Promise<ResultadoRecomendacionDto>;
 }

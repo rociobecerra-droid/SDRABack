@@ -128,7 +128,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], ObjetosAprendizajeController.prototype, "getDownloadUrl", null);
 __decorate([
-    (0, common_1.Delete)(':id'),
+    (0, common_1.Delete)(':id/full'),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Number]),

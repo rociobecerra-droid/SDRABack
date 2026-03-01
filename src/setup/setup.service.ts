@@ -19,6 +19,7 @@
           database: this.configService.get<string>('DB_NAME'),
           entities: [__dirname + '/../**/*.entity{.ts,.js}'],
           synchronize: false,
+          timezone: '-07:00',
           ssl: isProduction ? { rejectUnauthorized: false } : false,
           extra: {
             connectionLimit: 35,

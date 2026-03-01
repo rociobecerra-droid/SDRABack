@@ -42,75 +42,101 @@ let ObjetosAprendizajeService = class ObjetosAprendizajeService extends generic_
         return await this.objetosAprendizajeRepository.save(nuevoObjeto);
     }
     async updateWithFile(id, objetoData, file) {
-        var _a;
         const objetoExistente = await this.objetosAprendizajeRepository.findOne({
             where: { id }
         });
         if (!objetoExistente) {
-            throw new Error('Objeto de aprendizaje no encontrado');
+            throw new common_1.NotFoundException('Objeto de aprendizaje no encontrado');
         }
         if (file) {
-            if (objetoExistente.cloudinary_public_id || ((_a = objetoExistente.contenido) === null || _a === void 0 ? void 0 : _a.includes('cloudinary'))) {
+            const cloudinaryInfoAntigua = this.resolverCloudinaryInfo(objetoExistente);
+            if (cloudinaryInfoAntigua) {
+                const { publicId, resourceType } = cloudinaryInfoAntigua;
                 try {
-                    const publicId = objetoExistente.cloudinary_public_id ||
-                        this.cloudinaryService.extractPublicId(objetoExistente.contenido);
-                    await this.cloudinaryService.deleteFile(publicId);
-                    console.log(`Archivo antiguo eliminado: ${publicId}`);
+                    await this.cloudinaryService.deleteFile(publicId, resourceType);
+                    console.log(`Archivo antiguo eliminado de Cloudinary: ${publicId} (${resourceType})`);
                 }
                 catch (error) {
-                    console.error('Error al eliminar archivo antiguo:', error.message);
+                    console.error('Error al eliminar archivo antiguo de Cloudinary:', error.message);
                 }
             }
             const uploadResult = await this.cloudinaryService.uploadFile(file, 'objetos-aprendizaje');
             objetoData.contenido = uploadResult.url;
             objetoData.cloudinary_public_id = uploadResult.public_id;
-            console.log(`Nuevo archivo subido: ${uploadResult.public_id}`);
+            console.log(`Nuevo archivo subido a Cloudinary: ${uploadResult.public_id}`);
         }
         await this.objetosAprendizajeRepository.update(id, objetoData);
         return await this.objetosAprendizajeRepository.findOne({ where: { id } });
     }
     async deleteWithFile(id) {
-        var _a;
         const objeto = await this.objetosAprendizajeRepository.findOne({ where: { id } });
         if (!objeto) {
-            throw new Error('Objeto de aprendizaje no encontrado');
+            throw new common_1.NotFoundException('Objeto de aprendizaje no encontrado');
         }
         let fileDeleted = false;
-        if (objeto.cloudinary_public_id || ((_a = objeto.contenido) === null || _a === void 0 ? void 0 : _a.includes('cloudinary'))) {
+        const cloudinaryInfo = this.resolverCloudinaryInfo(objeto);
+        if (cloudinaryInfo) {
+            const { publicId, resourceType } = cloudinaryInfo;
             try {
-                const publicId = objeto.cloudinary_public_id ||
-                    this.cloudinaryService.extractPublicId(objeto.contenido);
-                await this.cloudinaryService.deleteFile(publicId);
+                await this.cloudinaryService.deleteFile(publicId, resourceType);
                 fileDeleted = true;
-                console.log(`Archivo eliminado de Cloudinary: ${publicId}`);
+                console.log(`Archivo eliminado de Cloudinary: ${publicId} (${resourceType})`);
             }
             catch (error) {
-                console.error(`Error al eliminar el archivo de Cloudinary:`, error.message);
-                throw new Error(`Error al eliminar el archivo de Cloudinary: ${error.message}`);
+                console.error(`Error al eliminar archivo de Cloudinary (${publicId}):`, error.message);
             }
         }
-        await this.delete(id);
+        else {
+            console.log(`Objeto ${id} no tiene archivo en Cloudinary, solo se elimina el registro.`);
+        }
+        await this.objetosAprendizajeRepository.delete(id);
         return {
             message: 'Objeto de aprendizaje eliminado exitosamente',
             fileDeleted,
         };
     }
     async getDownloadUrl(id) {
-        var _a;
         const objeto = await this.objetosAprendizajeRepository.findOne({ where: { id } });
         if (!objeto) {
-            throw new Error('Objeto de aprendizaje no encontrado');
+            throw new common_1.NotFoundException('Objeto de aprendizaje no encontrado');
         }
-        if (!objeto.cloudinary_public_id && !((_a = objeto.contenido) === null || _a === void 0 ? void 0 : _a.includes('cloudinary'))) {
-            throw new Error('El objeto no tiene un archivo en Cloudinary');
+        const cloudinaryInfo = this.resolverCloudinaryInfo(objeto);
+        if (!cloudinaryInfo) {
+            throw new common_1.NotFoundException('El objeto no tiene un archivo almacenado en Cloudinary');
         }
-        const publicId = objeto.cloudinary_public_id ||
-            this.cloudinaryService.extractPublicId(objeto.contenido);
-        const downloadUrl = this.cloudinaryService.getDownloadUrl(publicId, 'raw');
+        const downloadUrl = this.cloudinaryService.getDownloadUrl(cloudinaryInfo.publicId, cloudinaryInfo.resourceType);
         return {
             downloadUrl,
             nombre: objeto.nombre
         };
+    }
+    resolverCloudinaryInfo(objeto) {
+        var _a;
+        let publicId = null;
+        if (objeto.cloudinary_public_id) {
+            publicId = objeto.cloudinary_public_id;
+        }
+        else if ((_a = objeto.contenido) === null || _a === void 0 ? void 0 : _a.includes('cloudinary.com')) {
+            try {
+                publicId = this.cloudinaryService.extractPublicId(objeto.contenido);
+            }
+            catch (error) {
+                console.error(`No se pudo extraer public_id de la URL: ${objeto.contenido}`, error.message);
+                return null;
+            }
+        }
+        else {
+            return null;
+        }
+        const resourceType = this.inferResourceType(objeto.contenido || '');
+        return { publicId, resourceType };
+    }
+    inferResourceType(url) {
+        if (url.includes('/video/upload/'))
+            return 'video';
+        if (url.includes('/image/upload/'))
+            return 'image';
+        return 'raw';
     }
 };
 ObjetosAprendizajeService = __decorate([

@@ -94,7 +94,7 @@ async getDownloadUrl(@Param('id') id: number) {
     /**
      * Eliminar objeto de aprendizaje y su archivo en Cloudinary
      */
-    @Delete(':id')
+    @Delete(':id/full')
     async deleteWithFile(@Param('id') id: number) {
         try {
             return await this.objetosAprendizajeService.deleteWithFile(id);

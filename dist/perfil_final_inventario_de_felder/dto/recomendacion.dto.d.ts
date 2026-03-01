@@ -3,7 +3,6 @@ import { ObjetosAprendizaje } from 'src/unidades/entities/objetos_aprendizaje.en
 export declare class RecomendacionObjetoDto {
     objeto: ObjetosAprendizaje;
     estiloObjeto: EstiloObjeto;
-    compatibilidad: number;
     estilosCompatibles: string[];
 }
 export declare class ResultadoRecomendacionDto {

@@ -103,19 +103,6 @@ let PerfilFinalInventarioDeFelderService = class PerfilFinalInventarioDeFelderSe
         });
         return estilos.sort((a, b) => b.puntaje - a.puntaje);
     }
-    calcularCompatibilidad(estilosEstudiante, estilosObjeto) {
-        let compatibilidad = 0;
-        let pesoTotal = 0;
-        estilosEstudiante.forEach((estiloEst, index) => {
-            const peso = 4 - index;
-            pesoTotal += peso;
-            if (estilosObjeto.includes(estiloEst.estilo)) {
-                const bonusPuntaje = estiloEst.puntaje / 11;
-                compatibilidad += peso * (1 + bonusPuntaje);
-            }
-        });
-        return pesoTotal > 0 ? (compatibilidad / (pesoTotal * 2)) * 100 : 0;
-    }
     async recomendarObjetosParaTema(nroCuenta, idTema) {
         const perfil = await this.perfilFinalInventarioDeFelderRepository.findOne({
             where: { nro_cuenta: nroCuenta }
@@ -137,35 +124,34 @@ let PerfilFinalInventarioDeFelderService = class PerfilFinalInventarioDeFelderSe
                 estilosEstudiante: nombresEstilos
             };
         }
-        const objetosEncontrados = [];
-        let estiloUsado = null;
+        const objetosEncontradosMap = new Map();
+        const estilosConResultados = [];
         for (const estiloInfo of estilosEstudiante) {
             const estiloBuscado = estiloInfo.estilo;
-            const objetosCompatibles = [];
+            let encontradosEnEsteEstilo = 0;
             for (const objeto of objetos) {
                 if (objeto.estiloObjeto && objeto.estiloObjeto.estilos) {
                     const estilosObjeto = objeto.estiloObjeto.estilos;
                     if (estilosObjeto.includes(estiloBuscado)) {
-                        const compatibilidad = this.calcularCompatibilidad(estilosEstudiante, estilosObjeto);
-                        const estilosCompatibles = estilosEstudiante
-                            .filter(e => estilosObjeto.includes(e.estilo))
-                            .map(e => e.estilo);
-                        objetosCompatibles.push({
-                            objeto,
-                            estiloObjeto: objeto.estiloObjeto,
-                            compatibilidad,
-                            estilosCompatibles
-                        });
+                        if (!objetosEncontradosMap.has(objeto.id)) {
+                            const estilosCompatibles = estilosEstudiante
+                                .filter(e => estilosObjeto.includes(e.estilo))
+                                .map(e => e.estilo);
+                            objetosEncontradosMap.set(objeto.id, {
+                                objeto,
+                                estiloObjeto: objeto.estiloObjeto,
+                                estilosCompatibles
+                            });
+                        }
+                        encontradosEnEsteEstilo++;
                     }
                 }
             }
-            if (objetosCompatibles.length > 0) {
-                objetosEncontrados.push(...objetosCompatibles);
-                estiloUsado = estiloBuscado;
-                break;
+            if (encontradosEnEsteEstilo > 0) {
+                estilosConResultados.push(estiloBuscado);
             }
         }
-        objetosEncontrados.sort((a, b) => b.compatibilidad - a.compatibilidad);
+        const objetosEncontrados = Array.from(objetosEncontradosMap.values());
         if (objetosEncontrados.length === 0) {
             return {
                 mensaje: `No se encontraron objetos de aprendizaje compatibles con tus estilos de aprendizaje.`,
@@ -175,7 +161,7 @@ let PerfilFinalInventarioDeFelderService = class PerfilFinalInventarioDeFelderSe
             };
         }
         return {
-            mensaje: `Se encontraron ${objetosEncontrados.length} objeto(s) de aprendizaje compatible(s) con tu estilo (${estiloUsado})`,
+            mensaje: `Se encontraron ${objetosEncontrados.length} objeto(s) de aprendizaje compatible(s) con tus estilos (${estilosConResultados.join(', ')})`,
             objetos: objetosEncontrados,
             totalCompatibles: objetosEncontrados.length,
             estilosEstudiante: nombresEstilos
