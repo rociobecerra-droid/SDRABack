@@ -28,6 +28,16 @@ let PerfilFinalInventarioDeFelderService = class PerfilFinalInventarioDeFelderSe
         this.gruposRepository = gruposRepository;
         this.objetosAprendizajeRepository = objetosAprendizajeRepository;
         this.estiloObjetoRepository = estiloObjetoRepository;
+        this.estiloOpuesto = {
+            activo: 'reflexivo',
+            reflexivo: 'activo',
+            sensorial: 'intuitivo',
+            intuitivo: 'sensorial',
+            visual: 'verbal',
+            verbal: 'visual',
+            secuencial: 'global',
+            global: 'secuencial',
+        };
     }
     async findByGrupoIds(ids) {
         return this.perfilFinalInventarioDeFelderRepository.find({ where: { grupo: (0, typeorm_2.In)(ids) } });
@@ -70,101 +80,94 @@ let PerfilFinalInventarioDeFelderService = class PerfilFinalInventarioDeFelderSe
         const estrategiasLimitadas = estrategiasOrdenadas.slice(0, 4);
         return estrategiasLimitadas;
     }
-    extraerEstilos(perfil) {
-        var _a, _b, _c, _d;
-        const estilos = [];
-        const ar = perfil.activo_reflexivo;
-        const puntajeAR = parseInt(((_a = ar.match(/\d+/)) === null || _a === void 0 ? void 0 : _a[0]) || '0');
-        const tipoAR = ar.charAt(ar.length - 1);
-        estilos.push({
-            estilo: tipoAR === 'A' ? 'activo' : 'reflexivo',
-            puntaje: puntajeAR
-        });
-        const si = perfil.sensorial_intuitivo;
-        const puntajeSI = parseInt(((_b = si.match(/\d+/)) === null || _b === void 0 ? void 0 : _b[0]) || '0');
-        const tipoSI = si.charAt(si.length - 1);
-        estilos.push({
-            estilo: tipoSI === 'A' ? 'sensorial' : 'intuitivo',
-            puntaje: puntajeSI
-        });
-        const vv = perfil.visual_verbal;
-        const puntajeVV = parseInt(((_c = vv.match(/\d+/)) === null || _c === void 0 ? void 0 : _c[0]) || '0');
-        const tipoVV = vv.charAt(vv.length - 1);
-        estilos.push({
-            estilo: tipoVV === 'A' ? 'visual' : 'verbal',
-            puntaje: puntajeVV
-        });
-        const sg = perfil.secuencial_global;
-        const puntajeSG = parseInt(((_d = sg.match(/\d+/)) === null || _d === void 0 ? void 0 : _d[0]) || '0');
-        const tipoSG = sg.charAt(sg.length - 1);
-        estilos.push({
-            estilo: tipoSG === 'A' ? 'secuencial' : 'global',
-            puntaje: puntajeSG
-        });
-        return estilos.sort((a, b) => b.puntaje - a.puntaje);
+    extraerDimensiones(perfil) {
+        const UMBRAL_EQUILIBRIO = 3;
+        const parseDimension = (raw, estiloA, estiloB) => {
+            var _a;
+            const puntaje = parseInt(((_a = raw.match(/\d+/)) === null || _a === void 0 ? void 0 : _a[0]) || '0');
+            const tipo = raw.charAt(raw.length - 1);
+            const estiloPrincipal = tipo === 'A' ? estiloA : estiloB;
+            const estiloFallback = puntaje <= UMBRAL_EQUILIBRIO
+                ? this.estiloOpuesto[estiloPrincipal]
+                : null;
+            return { estiloPrincipal, estiloFallback, puntaje };
+        };
+        const dimensiones = [
+            parseDimension(perfil.activo_reflexivo, 'activo', 'reflexivo'),
+            parseDimension(perfil.sensorial_intuitivo, 'sensorial', 'intuitivo'),
+            parseDimension(perfil.visual_verbal, 'visual', 'verbal'),
+            parseDimension(perfil.secuencial_global, 'secuencial', 'global'),
+        ];
+        return dimensiones.sort((a, b) => b.puntaje - a.puntaje);
+    }
+    buscarObjetosPorEstilo(objetos, estilo, todosLosEstilosDelAlumno, mapaAcumulado) {
+        var _a, _b;
+        let encontrados = 0;
+        for (const objeto of objetos) {
+            if ((_b = (_a = objeto.estiloObjeto) === null || _a === void 0 ? void 0 : _a.estilos) === null || _b === void 0 ? void 0 : _b.includes(estilo)) {
+                if (!mapaAcumulado.has(objeto.id)) {
+                    const estilosCompatibles = todosLosEstilosDelAlumno.filter(e => objeto.estiloObjeto.estilos.includes(e));
+                    mapaAcumulado.set(objeto.id, {
+                        objeto,
+                        estiloObjeto: objeto.estiloObjeto,
+                        estilosCompatibles,
+                    });
+                }
+                encontrados++;
+            }
+        }
+        return encontrados;
     }
     async recomendarObjetosParaTema(nroCuenta, idTema) {
         const perfil = await this.perfilFinalInventarioDeFelderRepository.findOne({
             where: { nro_cuenta: nroCuenta }
         });
         if (!perfil) {
-            throw new common_1.NotFoundException(`No se encontró perfil para el estudiante con número de cuenta ${nroCuenta}`);
+            throw new common_1.NotFoundException(`No se encontro perfil para el estudiante con numero de cuenta ${nroCuenta}`);
         }
-        const estilosEstudiante = this.extraerEstilos(perfil);
-        const nombresEstilos = estilosEstudiante.map(e => e.estilo);
+        const dimensiones = this.extraerDimensiones(perfil);
+        const todosLosEstilosDelAlumno = dimensiones.map(d => d.estiloPrincipal);
         const objetos = await this.objetosAprendizajeRepository.find({
             where: { id_tema: idTema },
-            relations: ['estiloObjeto', 'tema']
+            relations: ['estiloObjeto', 'tema'],
         });
         if (objetos.length === 0) {
             return {
                 mensaje: 'No hay objetos de aprendizaje disponibles para este tema',
                 objetos: [],
                 totalCompatibles: 0,
-                estilosEstudiante: nombresEstilos
+                estilosEstudiante: todosLosEstilosDelAlumno,
             };
         }
-        const objetosEncontradosMap = new Map();
+        const mapaAcumulado = new Map();
         const estilosConResultados = [];
-        for (const estiloInfo of estilosEstudiante) {
-            const estiloBuscado = estiloInfo.estilo;
-            let encontradosEnEsteEstilo = 0;
-            for (const objeto of objetos) {
-                if (objeto.estiloObjeto && objeto.estiloObjeto.estilos) {
-                    const estilosObjeto = objeto.estiloObjeto.estilos;
-                    if (estilosObjeto.includes(estiloBuscado)) {
-                        if (!objetosEncontradosMap.has(objeto.id)) {
-                            const estilosCompatibles = estilosEstudiante
-                                .filter(e => estilosObjeto.includes(e.estilo))
-                                .map(e => e.estilo);
-                            objetosEncontradosMap.set(objeto.id, {
-                                objeto,
-                                estiloObjeto: objeto.estiloObjeto,
-                                estilosCompatibles
-                            });
-                        }
-                        encontradosEnEsteEstilo++;
-                    }
+        for (const dimension of dimensiones) {
+            const { estiloPrincipal, estiloFallback } = dimension;
+            const encontradosPrincipal = this.buscarObjetosPorEstilo(objetos, estiloPrincipal, todosLosEstilosDelAlumno, mapaAcumulado);
+            if (encontradosPrincipal > 0) {
+                estilosConResultados.push(estiloPrincipal);
+            }
+            else if (estiloFallback) {
+                const encontradosFallback = this.buscarObjetosPorEstilo(objetos, estiloFallback, todosLosEstilosDelAlumno, mapaAcumulado);
+                if (encontradosFallback > 0) {
+                    estilosConResultados.push(estiloFallback);
                 }
             }
-            if (encontradosEnEsteEstilo > 0) {
-                estilosConResultados.push(estiloBuscado);
-            }
         }
-        const objetosEncontrados = Array.from(objetosEncontradosMap.values());
+        const objetosEncontrados = Array.from(mapaAcumulado.values());
         if (objetosEncontrados.length === 0) {
             return {
-                mensaje: `No se encontraron objetos de aprendizaje compatibles con tus estilos de aprendizaje.`,
+                mensaje: 'No se encontraron objetos de aprendizaje compatibles con tus estilos de aprendizaje.',
                 objetos: [],
                 totalCompatibles: 0,
-                estilosEstudiante: nombresEstilos
+                estilosEstudiante: todosLosEstilosDelAlumno,
             };
         }
         return {
             mensaje: `Se encontraron ${objetosEncontrados.length} objeto(s) de aprendizaje compatible(s) con tus estilos (${estilosConResultados.join(', ')})`,
             objetos: objetosEncontrados,
             totalCompatibles: objetosEncontrados.length,
-            estilosEstudiante: nombresEstilos
+            estilosEstudiante: todosLosEstilosDelAlumno,
         };
     }
 };

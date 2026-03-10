@@ -97,61 +97,98 @@ export class PerfilFinalInventarioDeFelderService extends GenericService<PerfilF
     return estrategiasLimitadas;
   }
 
-    // ===== ALGORITMO DE RECOMENDACIÓN =====
+// ===== ALGORITMO DE RECOMENDACIÓN =====
 
   /**
-   * Extrae los estilos de aprendizaje dominantes del perfil del estudiante
-   * considerando la intensidad del puntaje
+   * Mapa de estilos opuestos por dimension.
    */
-  private extraerEstilos(perfil: PerfilFinalInventarioDeFelder): { estilo: string; puntaje: number }[] {
-    const estilos: { estilo: string; puntaje: number }[] = [];
+  private readonly estiloOpuesto: Record<string, string> = {
+    activo: 'reflexivo',
+    reflexivo: 'activo',
+    sensorial: 'intuitivo',
+    intuitivo: 'sensorial',
+    visual: 'verbal',
+    verbal: 'visual',
+    secuencial: 'global',
+    global: 'secuencial',
+  };
 
-    // Activo-Reflexivo
-    const ar = perfil.activo_reflexivo;
-    const puntajeAR = parseInt(ar.match(/\d+/)?.[0] || '0');
-    const tipoAR = ar.charAt(ar.length - 1);
-    estilos.push({
-      estilo: tipoAR === 'A' ? 'activo' : 'reflexivo',
-      puntaje: puntajeAR
-    });
+  /**
+   * Extrae las dimensiones de aprendizaje del perfil del estudiante.
+   * Para puntajes bajos (1 o 3), incluye tambien el estilo opuesto como fallback
+   * ya que el alumno tiene equilibrio entre ambos estilos de esa dimension.
+   *
+   * - estiloPrincipal: el estilo dominante de la dimension
+   * - estiloFallback: el opuesto (solo si puntaje <= 3, sino null)
+   * - puntaje: intensidad de la preferencia
+   */
+  private extraerDimensiones(perfil: PerfilFinalInventarioDeFelder): {
+    estiloPrincipal: string;
+    estiloFallback: string | null;
+    puntaje: number;
+  }[] {
+    const UMBRAL_EQUILIBRIO = 3;
 
-    // Sensorial-Intuitivo
-    const si = perfil.sensorial_intuitivo;
-    const puntajeSI = parseInt(si.match(/\d+/)?.[0] || '0');
-    const tipoSI = si.charAt(si.length - 1);
-    estilos.push({
-      estilo: tipoSI === 'A' ? 'sensorial' : 'intuitivo',
-      puntaje: puntajeSI
-    });
+    const parseDimension = (raw: string, estiloA: string, estiloB: string) => {
+      const puntaje = parseInt(raw.match(/\d+/)?.[0] || '0');
+      const tipo = raw.charAt(raw.length - 1);
+      const estiloPrincipal = tipo === 'A' ? estiloA : estiloB;
+      const estiloFallback = puntaje <= UMBRAL_EQUILIBRIO
+        ? this.estiloOpuesto[estiloPrincipal]
+        : null;
+      return { estiloPrincipal, estiloFallback, puntaje };
+    };
 
-    // Visual-Verbal
-    const vv = perfil.visual_verbal;
-    const puntajeVV = parseInt(vv.match(/\d+/)?.[0] || '0');
-    const tipoVV = vv.charAt(vv.length - 1);
-    estilos.push({
-      estilo: tipoVV === 'A' ? 'visual' : 'verbal',
-      puntaje: puntajeVV
-    });
+    const dimensiones = [
+      parseDimension(perfil.activo_reflexivo,   'activo',     'reflexivo'),
+      parseDimension(perfil.sensorial_intuitivo, 'sensorial',  'intuitivo'),
+      parseDimension(perfil.visual_verbal,       'visual',     'verbal'),
+      parseDimension(perfil.secuencial_global,   'secuencial', 'global'),
+    ];
 
-    // Secuencial-Global
-    const sg = perfil.secuencial_global;
-    const puntajeSG = parseInt(sg.match(/\d+/)?.[0] || '0');
-    const tipoSG = sg.charAt(sg.length - 1);
-    estilos.push({
-      estilo: tipoSG === 'A' ? 'secuencial' : 'global',
-      puntaje: puntajeSG
-    });
-
-    return estilos.sort((a, b) => b.puntaje - a.puntaje);
+    // Ordenar por puntaje descendente (mayor preferencia primero)
+    return dimensiones.sort((a, b) => b.puntaje - a.puntaje);
   }
 
-    /**
-   * Recomienda objetos de aprendizaje para un tema específico
-   * basándose en el perfil del estudiante.
-   * 
-   * Busca objetos compatibles con los 4 estilos de aprendizaje del estudiante
-   * (en orden de dominancia), acumulando resultados de todos los estilos
-   * sin duplicar objetos.
+  /**
+   * Busca objetos de un tema que coincidan con un estilo dado.
+   * Retorna solo los que no estén ya en el mapa (evita duplicados).
+   */
+  private buscarObjetosPorEstilo(
+    objetos: ObjetosAprendizaje[],
+    estilo: string,
+    todosLosEstilosDelAlumno: string[],
+    mapaAcumulado: Map<number, RecomendacionObjetoDto>
+  ): number {
+    let encontrados = 0;
+    for (const objeto of objetos) {
+      if (objeto.estiloObjeto?.estilos?.includes(estilo)) {
+        if (!mapaAcumulado.has(objeto.id)) {
+          const estilosCompatibles = todosLosEstilosDelAlumno.filter(e =>
+            objeto.estiloObjeto.estilos.includes(e)
+          );
+          mapaAcumulado.set(objeto.id, {
+            objeto,
+            estiloObjeto: objeto.estiloObjeto,
+            estilosCompatibles,
+          });
+        }
+        encontrados++;
+      }
+    }
+    return encontrados;
+  }
+
+  /**
+   * Recomienda objetos de aprendizaje para un tema especifico
+   * basandose en el perfil del estudiante.
+   *
+   * Logica por dimension:
+   * - Puntaje 5, 7, 11: solo busca con el estilo dominante.
+   * - Puntaje 1 o 3: busca primero con el estilo dominante;
+   *                       si no encuentra nada, usa el estilo opuesto como fallback.
+   *
+   * Los resultados de las 4 dimensiones se acumulan sin duplicar objetos.
    */
   async recomendarObjetosParaTema(
     nroCuenta: number,
@@ -163,17 +200,21 @@ export class PerfilFinalInventarioDeFelderService extends GenericService<PerfilF
     });
 
     if (!perfil) {
-      throw new NotFoundException(`No se encontró perfil para el estudiante con número de cuenta ${nroCuenta}`);
+      throw new NotFoundException(
+        `No se encontro perfil para el estudiante con numero de cuenta ${nroCuenta}`
+      );
     }
 
-    // 2. Extraer estilos del estudiante (ordenados por puntaje descendente)
-    const estilosEstudiante = this.extraerEstilos(perfil);
-    const nombresEstilos = estilosEstudiante.map(e => e.estilo);
+    // 2. Extraer dimensiones (ordenadas por puntaje descendente)
+    const dimensiones = this.extraerDimensiones(perfil);
 
-    // 3. Obtener todos los objetos de aprendizaje del tema
+    // Lista plana de los estilos principales para calcular compatibilidad
+    const todosLosEstilosDelAlumno = dimensiones.map(d => d.estiloPrincipal);
+
+    // 3. Obtener todos los objetos del tema
     const objetos = await this.objetosAprendizajeRepository.find({
       where: { id_tema: idTema },
-      relations: ['estiloObjeto', 'tema']
+      relations: ['estiloObjeto', 'tema'],
     });
 
     if (objetos.length === 0) {
@@ -181,54 +222,44 @@ export class PerfilFinalInventarioDeFelderService extends GenericService<PerfilF
         mensaje: 'No hay objetos de aprendizaje disponibles para este tema',
         objetos: [],
         totalCompatibles: 0,
-        estilosEstudiante: nombresEstilos
+        estilosEstudiante: todosLosEstilosDelAlumno,
       };
     }
 
-    // 4. Buscar objetos compatibles en los 4 estilos del estudiante (sin duplicados)
-    const objetosEncontradosMap = new Map<number, RecomendacionObjetoDto>();
+    // 4. Recorrer dimensiones acumulando objetos
+    const mapaAcumulado = new Map<number, RecomendacionObjetoDto>();
     const estilosConResultados: string[] = [];
 
-    for (const estiloInfo of estilosEstudiante) {
-      const estiloBuscado = estiloInfo.estilo;
-      let encontradosEnEsteEstilo = 0;
+    for (const dimension of dimensiones) {
+      const { estiloPrincipal, estiloFallback } = dimension;
 
-      for (const objeto of objetos) {
-        if (objeto.estiloObjeto && objeto.estiloObjeto.estilos) {
-          const estilosObjeto = objeto.estiloObjeto.estilos;
+      // Buscar con el estilo principal
+      const encontradosPrincipal = this.buscarObjetosPorEstilo(
+        objetos, estiloPrincipal, todosLosEstilosDelAlumno, mapaAcumulado
+      );
 
-          if (estilosObjeto.includes(estiloBuscado)) {
-            // Evitar duplicados: si ya fue agregado, no volvemos a insertarlo
-            if (!objetosEncontradosMap.has(objeto.id)) {
-              const estilosCompatibles = estilosEstudiante
-                .filter(e => estilosObjeto.includes(e.estilo))
-                .map(e => e.estilo);
-
-              objetosEncontradosMap.set(objeto.id, {
-                objeto,
-                estiloObjeto: objeto.estiloObjeto,
-                estilosCompatibles
-              });
-            }
-            encontradosEnEsteEstilo++;
-          }
+      if (encontradosPrincipal > 0) {
+        estilosConResultados.push(estiloPrincipal);
+      } else if (estiloFallback) {
+        // Puntaje <= 3 y no se encontro nada con el principal → usar fallback
+        const encontradosFallback = this.buscarObjetosPorEstilo(
+          objetos, estiloFallback, todosLosEstilosDelAlumno, mapaAcumulado
+        );
+        if (encontradosFallback > 0) {
+          estilosConResultados.push(estiloFallback);
         }
-      }
-
-      if (encontradosEnEsteEstilo > 0) {
-        estilosConResultados.push(estiloBuscado);
       }
     }
 
-    const objetosEncontrados = Array.from(objetosEncontradosMap.values());
+    const objetosEncontrados = Array.from(mapaAcumulado.values());
 
     // 5. Preparar respuesta
     if (objetosEncontrados.length === 0) {
       return {
-        mensaje: `No se encontraron objetos de aprendizaje compatibles con tus estilos de aprendizaje.`,
+        mensaje: 'No se encontraron objetos de aprendizaje compatibles con tus estilos de aprendizaje.',
         objetos: [],
         totalCompatibles: 0,
-        estilosEstudiante: nombresEstilos
+        estilosEstudiante: todosLosEstilosDelAlumno,
       };
     }
 
@@ -236,7 +267,7 @@ export class PerfilFinalInventarioDeFelderService extends GenericService<PerfilF
       mensaje: `Se encontraron ${objetosEncontrados.length} objeto(s) de aprendizaje compatible(s) con tus estilos (${estilosConResultados.join(', ')})`,
       objetos: objetosEncontrados,
       totalCompatibles: objetosEncontrados.length,
-      estilosEstudiante: nombresEstilos
+      estilosEstudiante: todosLosEstilosDelAlumno,
     };
   }
 }
