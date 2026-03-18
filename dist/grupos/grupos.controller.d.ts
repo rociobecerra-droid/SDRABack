@@ -11,6 +11,7 @@ export declare class GruposController extends GenericController<Grupos, GruposSe
     findConteoByNumGrupo(numGrupo: number): Promise<{
         [key: string]: number;
     }>;
+    obtenerNumerosGrupo(): Promise<number[]>;
     findGrupo(grupo: any): Promise<Grupos[]>;
     asignarEstrategias(grupoId: number, estrategias: number[]): Promise<Grupos>;
 }

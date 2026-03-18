@@ -38,6 +38,9 @@ let GruposController = class GruposController extends generic_controller_1.Gener
     async findConteoByNumGrupo(numGrupo) {
         return this.gruposService.obtenerConteoAlumnosPorEstrategia(numGrupo);
     }
+    async obtenerNumerosGrupo() {
+        return this.gruposService.obtenerNumerosGrupo();
+    }
     async findGrupo(grupo) {
         return this.gruposService.find(grupo);
     }
@@ -79,6 +82,12 @@ __decorate([
     __metadata("design:paramtypes", [Number]),
     __metadata("design:returntype", Promise)
 ], GruposController.prototype, "findConteoByNumGrupo", null);
+__decorate([
+    (0, common_1.Get)('numeros'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], GruposController.prototype, "obtenerNumerosGrupo", null);
 __decorate([
     (0, common_1.Post)('grupo'),
     __param(0, (0, common_1.Body)()),

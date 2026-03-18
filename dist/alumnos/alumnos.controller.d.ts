@@ -13,6 +13,12 @@ export declare class AlumnosController extends GenericController<Alumnos, Alumno
     }): Promise<Alumnos | {
         error: string;
     }>;
+    buscarAlumnos(search?: string, grupo?: string, page?: string, limit?: string): Promise<{
+        data: Alumnos[];
+        total: number;
+        page: number;
+        totalPages: number;
+    }>;
     findByNroCuenta(nroCuenta: number): Promise<Alumnos>;
     findByGrupo(grupo: number): Promise<Alumnos[]>;
     verificarCuestionario(nroCuenta: number): Promise<{

@@ -33,6 +33,15 @@ let GruposService = class GruposService extends generic_service_1.GenericService
     async findByGrupoIds(ids) {
         return this.gruposRepository.find({ where: { id_grupo: (0, typeorm_2.In)(ids) } });
     }
+    async obtenerNumerosGrupo() {
+        const grupos = await this.gruposRepository
+            .createQueryBuilder('grupo')
+            .select('DISTINCT grupo.grupo', 'grupo')
+            .where('grupo.deleted IS NULL')
+            .orderBy('grupo.grupo', 'ASC')
+            .getRawMany();
+        return grupos.map(g => g.grupo);
+    }
     async asignarEstrategias(grupoId, estrategiasIds) {
         const grupo = await this.gruposRepository.findOne({ where: { grupo: grupoId } });
         if (!grupo) {

@@ -113,4 +113,40 @@ export class AlumnosService extends GenericService<Alumnos> {
       return false;
     }
   }
+
+  async buscarAlumnos(
+  search?: string,
+  grupo?: number,
+  page: number = 1,
+  limit: number = 10
+): Promise<{ data: Alumnos[]; total: number; page: number; totalPages: number }> {
+  const query = this.alumnosRepository.createQueryBuilder('alumno')
+    .where('alumno.deleted IS NULL');
+
+  if (search) {
+    query.andWhere(
+      '(CONCAT(alumno.nombre, " ", alumno.apellido_1, " ", alumno.apellido_2) LIKE :search OR alumno.nro_cuenta LIKE :search)',
+      { search: `%${search}%` }
+    );
+  }
+
+  if (grupo) {
+    query.andWhere('alumno.grupo = :grupo', { grupo });
+  }
+
+  const total = await query.getCount();
+
+  const data = await query
+    .skip((page - 1) * limit)
+    .take(limit)
+    .orderBy('alumno.apellido_1', 'ASC')
+    .getMany();
+
+  return {
+    data,
+    total,
+    page,
+    totalPages: Math.ceil(total / limit),
+  };
+}
 }

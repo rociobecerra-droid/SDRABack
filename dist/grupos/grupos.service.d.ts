@@ -10,6 +10,7 @@ export declare class GruposService extends GenericService<Grupos> {
     constructor(gruposRepository: Repository<Grupos>, perfilFinalRepository: Repository<PerfilFinalInventarioDeFelder>, estrategiasEnsenanzaService: EstrategiaEnsenanzaService);
     findByNumGrupo(numGrupo: number): Promise<Grupos>;
     findByGrupoIds(ids: number[]): Promise<Grupos[]>;
+    obtenerNumerosGrupo(): Promise<number[]>;
     asignarEstrategias(grupoId: number, estrategiasIds: number[]): Promise<Grupos>;
     obtenerConteoAlumnosPorEstrategia(numGrupo: number, topResultados?: number): Promise<{
         [key: string]: number;

@@ -12,4 +12,10 @@ export declare class AlumnosService extends GenericService<Alumnos> {
     findByNroCuenta(nroCuenta: number): Promise<Alumnos>;
     findByGrupo(grupo: number): Promise<Alumnos[]>;
     verificarCuestionarioAsignado(nroCuenta: number): Promise<boolean>;
+    buscarAlumnos(search?: string, grupo?: number, page?: number, limit?: number): Promise<{
+        data: Alumnos[];
+        total: number;
+        page: number;
+        totalPages: number;
+    }>;
 }

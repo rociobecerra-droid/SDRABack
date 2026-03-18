@@ -37,6 +37,9 @@ let AlumnosController = class AlumnosController extends generic_controller_1.Gen
         }
         return alumno;
     }
+    async buscarAlumnos(search, grupo, page, limit) {
+        return this.alumnosService.buscarAlumnos(search, grupo ? Number(grupo) : undefined, page ? Number(page) : 1, limit ? Number(limit) : 10);
+    }
     async findByNroCuenta(nroCuenta) {
         return this.alumnosService.findByNroCuenta(nroCuenta);
     }
@@ -74,6 +77,16 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], AlumnosController.prototype, "login", null);
+__decorate([
+    (0, common_1.Get)('buscar'),
+    __param(0, (0, common_1.Query)('search')),
+    __param(1, (0, common_1.Query)('grupo')),
+    __param(2, (0, common_1.Query)('page')),
+    __param(3, (0, common_1.Query)('limit')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, String, String]),
+    __metadata("design:returntype", Promise)
+], AlumnosController.prototype, "buscarAlumnos", null);
 __decorate([
     (0, common_1.Get)('nro-cuenta/:nroCuenta'),
     __param(0, (0, common_1.Param)('nroCuenta', common_1.ParseIntPipe)),

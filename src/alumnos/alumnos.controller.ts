@@ -1,4 +1,4 @@
-import { Controller, Body, Get, Post, ParseIntPipe, Param } from '@nestjs/common';
+import { Controller, Body, Get, Post, ParseIntPipe, Param, Query } from '@nestjs/common';
 import { AlumnosService } from './alumnos.service';
 import { Alumnos } from './alumnos.entity';
 import { GenericController } from 'src/generic/generic.controller';
@@ -36,6 +36,21 @@ export class AlumnosController extends GenericController<Alumnos,AlumnosService>
     // Inicio de sesión exitoso
     return alumno;
   }
+
+  @Get('buscar')
+async buscarAlumnos(
+  @Query('search') search?: string,
+  @Query('grupo') grupo?: string,
+  @Query('page') page?: string,
+  @Query('limit') limit?: string,
+) {
+  return this.alumnosService.buscarAlumnos(
+    search,
+    grupo ? Number(grupo) : undefined,
+    page ? Number(page) : 1,
+    limit ? Number(limit) : 10,
+  );
+}
 
   /**
    * GET /alumnos/nro-cuenta/:nroCuenta

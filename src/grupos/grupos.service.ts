@@ -24,6 +24,17 @@ export class GruposService extends GenericService<Grupos>{
     return this.gruposRepository.find({ where: { id_grupo: In(ids) } });
   }
 
+  async obtenerNumerosGrupo(): Promise<number[]> {
+  const grupos = await this.gruposRepository
+    .createQueryBuilder('grupo')
+    .select('DISTINCT grupo.grupo', 'grupo')
+    .where('grupo.deleted IS NULL')
+    .orderBy('grupo.grupo', 'ASC')
+    .getRawMany();
+
+  return grupos.map(g => g.grupo);
+}
+
   async asignarEstrategias(grupoId: number, estrategiasIds: number[]): Promise<Grupos> {
     const grupo = await this.gruposRepository.findOne({ where: { grupo: grupoId } }); // Usar findOne con un objeto de opciones
   
