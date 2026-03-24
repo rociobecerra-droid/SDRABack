@@ -8,4 +8,5 @@ export declare class EstiloObjetoService extends GenericService<EstiloObjeto> {
     findByEstilo(estilo: string): Promise<EstiloObjeto[]>;
     addEstiloToObjeto(id: number, nuevoEstilo: string): Promise<EstiloObjeto>;
     removeEstiloFromObjeto(id: number, estiloARemover: string): Promise<EstiloObjeto>;
+    findAllStyles(): Promise<EstiloObjeto[]>;
 }

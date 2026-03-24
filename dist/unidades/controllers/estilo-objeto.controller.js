@@ -23,7 +23,7 @@ let EstiloObjetoController = class EstiloObjetoController extends generic_contro
         this.estiloObjetoService = estiloObjetoService;
     }
     async findAll() {
-        return this.estiloObjetoService.find();
+        return this.estiloObjetoService.findAllStyles();
     }
     async create(entity) {
         return this.estiloObjetoService.create(entity);

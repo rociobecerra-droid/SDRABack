@@ -60,4 +60,10 @@ export class EstiloObjetoService extends GenericService<EstiloObjeto> {
         
         return this.estiloObjetoRepository.save(estiloObjeto);
     }
+
+    async findAllStyles(): Promise<EstiloObjeto[]> {
+        return this.estiloObjetoRepository.find({
+            order: { objeto: 'ASC' }
+        });
+    }
 }

@@ -18,7 +18,7 @@ export class EstiloObjeto extends GenericEntity {
     @Column({ 
         type: 'varchar', 
         length: 100,
-        nullable: true  // ← Permite NULL para registros existentes
+        nullable: true  
     })
     tipo: string;
 }

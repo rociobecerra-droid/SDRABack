@@ -11,7 +11,7 @@ export class EstiloObjetoController extends GenericController<EstiloObjeto, Esti
 
     @Get()
     async findAll(): Promise<EstiloObjeto[]> {
-        return this.estiloObjetoService.find();
+        return this.estiloObjetoService.findAllStyles();
     }
 
     @Post()

@@ -59,6 +59,11 @@ let EstiloObjetoService = class EstiloObjetoService extends generic_service_1.Ge
         estiloObjeto.estilos = estiloObjeto.estilos.filter(estilo => estilo !== estiloARemover);
         return this.estiloObjetoRepository.save(estiloObjeto);
     }
+    async findAllStyles() {
+        return this.estiloObjetoRepository.find({
+            order: { objeto: 'ASC' }
+        });
+    }
 };
 EstiloObjetoService = __decorate([
     (0, common_1.Injectable)(),
