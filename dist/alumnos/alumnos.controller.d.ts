@@ -26,4 +26,9 @@ export declare class AlumnosController extends GenericController<Alumnos, Alumno
         tieneAsignado: boolean;
     }>;
     createAlumno(createAlumnoDto: CreateAlumnoDto): Promise<Alumnos>;
+    cambiarContrasena(body: {
+        nro_cuenta: number;
+        currentPassword: string;
+        newPassword: string;
+    }): Promise<Alumnos>;
 }

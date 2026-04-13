@@ -1,4 +1,12 @@
-import { Controller, Body, Get, Post, ParseIntPipe, Param, Query } from '@nestjs/common';
+import {
+  Controller,
+  Body,
+  Get,
+  Post,
+  ParseIntPipe,
+  Param,
+  Query,
+} from '@nestjs/common';
 import { AlumnosService } from './alumnos.service';
 import { Alumnos } from './alumnos.entity';
 import { GenericController } from 'src/generic/generic.controller';
@@ -6,7 +14,10 @@ import { CreateAlumnoDto } from './dtos/create-alumno.dto';
 import { UpdateAlumnoDto } from './dtos/update-alumno.dto';
 import { LoginAlumnoDto } from './dtos/login.dto';
 @Controller('alumnos')
-export class AlumnosController extends GenericController<Alumnos,AlumnosService>{
+export class AlumnosController extends GenericController<
+  Alumnos,
+  AlumnosService
+> {
   constructor(private readonly alumnosService: AlumnosService) {
     super(alumnosService);
   }
@@ -25,8 +36,11 @@ export class AlumnosController extends GenericController<Alumnos,AlumnosService>
   async login(@Body() body: { nro_cuenta: number; password: string }) {
     const { nro_cuenta, password } = body;
     // Buscar el alumno basado en el nroCuenta
-    const alumno = await this.alumnosService.obtenerAlumno(nro_cuenta, password);
-    
+    const alumno = await this.alumnosService.obtenerAlumno(
+      nro_cuenta,
+      password,
+    );
+
     if (!alumno || alumno.contraseña !== password) {
       // El inicio de sesión falló
       // Devolver un error o un objeto con el mensaje de error correspondiente
@@ -38,19 +52,19 @@ export class AlumnosController extends GenericController<Alumnos,AlumnosService>
   }
 
   @Get('buscar')
-async buscarAlumnos(
-  @Query('search') search?: string,
-  @Query('grupo') grupo?: string,
-  @Query('page') page?: string,
-  @Query('limit') limit?: string,
-) {
-  return this.alumnosService.buscarAlumnos(
-    search,
-    grupo ? Number(grupo) : undefined,
-    page ? Number(page) : 1,
-    limit ? Number(limit) : 10,
-  );
-}
+  async buscarAlumnos(
+    @Query('search') search?: string,
+    @Query('grupo') grupo?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.alumnosService.buscarAlumnos(
+      search,
+      grupo ? Number(grupo) : undefined,
+      page ? Number(page) : 1,
+      limit ? Number(limit) : 10,
+    );
+  }
 
   /**
    * GET /alumnos/nro-cuenta/:nroCuenta
@@ -70,24 +84,43 @@ async buscarAlumnos(
     return this.alumnosService.findByGrupo(grupo);
   }
 
-
   /**
    * GET /alumnos/:nroCuenta/verificar-cuestionario
    * Verificar si un alumno tiene el cuestionario asignado
    */
   @Get(':nroCuenta/verificar-cuestionario')
-  async verificarCuestionario(@Param('nroCuenta', ParseIntPipe) nroCuenta: number) {
-    const tieneAsignado = await this.alumnosService.verificarCuestionarioAsignado(nroCuenta);
-    return { 
+  async verificarCuestionario(
+    @Param('nroCuenta', ParseIntPipe) nroCuenta: number,
+  ) {
+    const tieneAsignado =
+      await this.alumnosService.verificarCuestionarioAsignado(nroCuenta);
+    return {
       nroCuenta,
-      tieneAsignado 
+      tieneAsignado,
     };
   }
 
   @Post('create-alumno')
-  async createAlumno(@Body() createAlumnoDto: CreateAlumnoDto): Promise<Alumnos> {
+  async createAlumno(
+    @Body() createAlumnoDto: CreateAlumnoDto,
+  ): Promise<Alumnos> {
     return this.alumnosService.crearAlumno(createAlumnoDto);
   }
 
+  @Post('cambiar-contrasena')
+  async cambiarContrasena(
+    @Body()
+    body: {
+      nro_cuenta: number;
+      currentPassword: string;
+      newPassword: string;
+    },
+  ): Promise<Alumnos> {
+    const { nro_cuenta, currentPassword, newPassword } = body;
+    return this.alumnosService.cambiarContrasena(
+      nro_cuenta,
+      currentPassword,
+      newPassword,
+    );
+  }
 }
-

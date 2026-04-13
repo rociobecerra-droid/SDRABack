@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Alumnos } from './alumnos.entity';
@@ -10,7 +14,7 @@ const CUESTIONARIO_DEFAULT_ID = 1; // ID del cuestionario a asignar automáticam
 @Injectable()
 export class AlumnosService extends GenericService<Alumnos> {
   constructor(
-    @InjectRepository(Alumnos) 
+    @InjectRepository(Alumnos)
     private readonly alumnosRepository: Repository<Alumnos>,
     private readonly alumnosCuestionariosService: AlumnosCuestionariosService,
   ) {
@@ -25,12 +29,12 @@ export class AlumnosService extends GenericService<Alumnos> {
   async crearAlumno(createAlumnoDto: CreateAlumnoDto): Promise<Alumnos> {
     // 1. Verificar si ya existe un alumno con ese número de cuenta
     const alumnoExistente = await this.alumnosRepository.findOne({
-      where: { nro_cuenta: createAlumnoDto.nro_cuenta }
+      where: { nro_cuenta: createAlumnoDto.nro_cuenta },
     });
 
     if (alumnoExistente) {
       throw new BadRequestException(
-        `Ya existe un alumno con el número de cuenta ${createAlumnoDto.nro_cuenta}`
+        `Ya existe un alumno con el número de cuenta ${createAlumnoDto.nro_cuenta}`,
       );
     }
 
@@ -42,10 +46,10 @@ export class AlumnosService extends GenericService<Alumnos> {
     try {
       await this.alumnosCuestionariosService.asignarCuestionario(
         alumnoGuardado.nro_cuenta,
-        CUESTIONARIO_DEFAULT_ID
+        CUESTIONARIO_DEFAULT_ID,
       );
       console.log(
-        `Cuestionario ${CUESTIONARIO_DEFAULT_ID} asignado automáticamente al alumno ${alumnoGuardado.nro_cuenta}`
+        `Cuestionario ${CUESTIONARIO_DEFAULT_ID} asignado automáticamente al alumno ${alumnoGuardado.nro_cuenta}`,
       );
     } catch (error) {
       console.error('Error al asignar cuestionario:', error.message);
@@ -57,11 +61,13 @@ export class AlumnosService extends GenericService<Alumnos> {
   }
 
   async obtenerAlumno(nroCuenta: number, password: string): Promise<Alumnos> {
-    if(nroCuenta===undefined){
-      return null
+    if (nroCuenta === undefined) {
+      return null;
     }
 
-    const alumno = await this.alumnosRepository.findOne({where: { nro_cuenta: nroCuenta }});
+    const alumno = await this.alumnosRepository.findOne({
+      where: { nro_cuenta: nroCuenta },
+    });
 
     if (alumno && alumno.contraseña === password) {
       return alumno;
@@ -78,11 +84,17 @@ export class AlumnosService extends GenericService<Alumnos> {
   async findByNroCuenta(nroCuenta: number): Promise<Alumnos> {
     const alumno = await this.alumnosRepository.findOne({
       where: { nro_cuenta: nroCuenta, deleted: null },
-      relations: ['grupoRelacion', 'alumnosCuestionarios', 'alumnosCuestionarios.cuestionario']
+      relations: [
+        'grupoRelacion',
+        'alumnosCuestionarios',
+        'alumnosCuestionarios.cuestionario',
+      ],
     });
 
     if (!alumno) {
-      throw new NotFoundException(`Alumno con número de cuenta ${nroCuenta} no encontrado`);
+      throw new NotFoundException(
+        `Alumno con número de cuenta ${nroCuenta} no encontrado`,
+      );
     }
 
     return alumno;
@@ -96,8 +108,37 @@ export class AlumnosService extends GenericService<Alumnos> {
   async findByGrupo(grupo: number): Promise<Alumnos[]> {
     return this.alumnosRepository.find({
       where: { grupo, deleted: null },
-      relations: ['grupoRelacion']
+      relations: ['grupoRelacion'],
     });
+  }
+
+  /**
+   * Cambiar la contraseña de un alumno
+   * @param nroCuenta Número de cuenta del alumno
+   * @param nuevaContraseña Nueva contraseña a establecer
+   * @returns El alumno actualizado
+   */
+  async cambiarContrasena(
+    nro_cuenta: number,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<Alumnos> {
+    const alumno = await this.alumnosRepository.findOne({
+      where: { nro_cuenta, deleted: null },
+    });
+
+    if (!alumno) {
+      throw new NotFoundException(
+        `Alumno con número de cuenta ${nro_cuenta} no encontrado`,
+      );
+    }
+
+    if (alumno.contraseña !== currentPassword) {
+      throw new BadRequestException('La contraseña actual es incorrecta');
+    }
+
+    alumno.contraseña = newPassword;
+    return this.alumnosRepository.save(alumno);
   }
 
   /**
@@ -107,46 +148,57 @@ export class AlumnosService extends GenericService<Alumnos> {
    */
   async verificarCuestionarioAsignado(nroCuenta: number): Promise<boolean> {
     try {
-      const asignaciones = await this.alumnosCuestionariosService.obtenerCuestionariosAlumno(nroCuenta);
-      return asignaciones.some(a => a.id_cuestionario === CUESTIONARIO_DEFAULT_ID);
+      const asignaciones =
+        await this.alumnosCuestionariosService.obtenerCuestionariosAlumno(
+          nroCuenta,
+        );
+      return asignaciones.some(
+        (a) => a.id_cuestionario === CUESTIONARIO_DEFAULT_ID,
+      );
     } catch (error) {
       return false;
     }
   }
 
   async buscarAlumnos(
-  search?: string,
-  grupo?: number,
-  page: number = 1,
-  limit: number = 10
-): Promise<{ data: Alumnos[]; total: number; page: number; totalPages: number }> {
-  const query = this.alumnosRepository.createQueryBuilder('alumno')
-    .where('alumno.deleted IS NULL');
+    search?: string,
+    grupo?: number,
+    page: number = 1,
+    limit: number = 10,
+  ): Promise<{
+    data: Alumnos[];
+    total: number;
+    page: number;
+    totalPages: number;
+  }> {
+    const query = this.alumnosRepository
+      .createQueryBuilder('alumno')
+      .where('alumno.deleted IS NULL');
 
-  if (search) {
-    query.andWhere(
-      '(CONCAT(alumno.nombre, " ", alumno.apellido_1, " ", alumno.apellido_2) LIKE :search OR alumno.nro_cuenta LIKE :search)',
-      { search: `%${search}%` }
-    );
+    if (search) {
+      query.andWhere(
+        '(CONCAT(alumno.nombre, " ", alumno.apellido_1, " ", alumno.apellido_2) LIKE :search OR alumno.nro_cuenta LIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
+
+    if (grupo) {
+      query.andWhere('alumno.grupo = :grupo', { grupo });
+    }
+
+    const total = await query.getCount();
+
+    const data = await query
+      .skip((page - 1) * limit)
+      .take(limit)
+      .orderBy('alumno.apellido_1', 'ASC')
+      .getMany();
+
+    return {
+      data,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    };
   }
-
-  if (grupo) {
-    query.andWhere('alumno.grupo = :grupo', { grupo });
-  }
-
-  const total = await query.getCount();
-
-  const data = await query
-    .skip((page - 1) * limit)
-    .take(limit)
-    .orderBy('alumno.apellido_1', 'ASC')
-    .getMany();
-
-  return {
-    data,
-    total,
-    page,
-    totalPages: Math.ceil(total / limit),
-  };
-}
 }

@@ -11,6 +11,7 @@ export declare class AlumnosService extends GenericService<Alumnos> {
     obtenerAlumno(nroCuenta: number, password: string): Promise<Alumnos>;
     findByNroCuenta(nroCuenta: number): Promise<Alumnos>;
     findByGrupo(grupo: number): Promise<Alumnos[]>;
+    cambiarContrasena(nro_cuenta: number, currentPassword: string, newPassword: string): Promise<Alumnos>;
     verificarCuestionarioAsignado(nroCuenta: number): Promise<boolean>;
     buscarAlumnos(search?: string, grupo?: number, page?: number, limit?: number): Promise<{
         data: Alumnos[];

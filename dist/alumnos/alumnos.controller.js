@@ -50,11 +50,15 @@ let AlumnosController = class AlumnosController extends generic_controller_1.Gen
         const tieneAsignado = await this.alumnosService.verificarCuestionarioAsignado(nroCuenta);
         return {
             nroCuenta,
-            tieneAsignado
+            tieneAsignado,
         };
     }
     async createAlumno(createAlumnoDto) {
         return this.alumnosService.crearAlumno(createAlumnoDto);
+    }
+    async cambiarContrasena(body) {
+        const { nro_cuenta, currentPassword, newPassword } = body;
+        return this.alumnosService.cambiarContrasena(nro_cuenta, currentPassword, newPassword);
     }
 };
 __decorate([
@@ -115,6 +119,13 @@ __decorate([
     __metadata("design:paramtypes", [create_alumno_dto_1.CreateAlumnoDto]),
     __metadata("design:returntype", Promise)
 ], AlumnosController.prototype, "createAlumno", null);
+__decorate([
+    (0, common_1.Post)('cambiar-contrasena'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AlumnosController.prototype, "cambiarContrasena", null);
 AlumnosController = __decorate([
     (0, common_1.Controller)('alumnos'),
     __metadata("design:paramtypes", [alumnos_service_1.AlumnosService])
