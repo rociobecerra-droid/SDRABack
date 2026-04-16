@@ -17,6 +17,7 @@ const common_1 = require("@nestjs/common");
 const generic_controller_1 = require("../../generic/generic.controller");
 const temas_entity_1 = require("../entities/temas.entity");
 const temas_service_1 = require("../services/temas.service");
+const update_tema_dto_1 = require("../dtos/update-tema.dto");
 let TemasController = class TemasController extends generic_controller_1.GenericController {
     constructor(temasService) {
         super(temasService);
@@ -27,6 +28,10 @@ let TemasController = class TemasController extends generic_controller_1.Generic
     }
     async create(entity) {
         return this.temasService.create(entity);
+    }
+    async updateTopic(id, updateTemaDto) {
+        console.log('Updating Tema with ID:', id, 'Data:', updateTemaDto);
+        return this.temasService.update(id, updateTemaDto);
     }
     async findByUnidad(idUnidad) {
         return this.temasService.findByUnidadId(idUnidad);
@@ -48,6 +53,14 @@ __decorate([
     __metadata("design:paramtypes", [temas_entity_1.Temas]),
     __metadata("design:returntype", Promise)
 ], TemasController.prototype, "create", null);
+__decorate([
+    (0, common_1.Put)(':id'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, update_tema_dto_1.UpdateTemaDto]),
+    __metadata("design:returntype", Promise)
+], TemasController.prototype, "updateTopic", null);
 __decorate([
     (0, common_1.Get)('unidad/:idUnidad'),
     __param(0, (0, common_1.Param)('idUnidad')),

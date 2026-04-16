@@ -1,7 +1,8 @@
-import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Put } from '@nestjs/common';
 import { GenericController } from 'src/generic/generic.controller';
 import { Temas } from '../entities/temas.entity';
 import { TemasService } from '../services/temas.service';
+import { UpdateTemaDto } from '../dtos/update-tema.dto';
 
 @Controller('temas')
 export class TemasController extends GenericController<Temas, TemasService> {
@@ -17,6 +18,12 @@ export class TemasController extends GenericController<Temas, TemasService> {
     @Post()
     async create(@Body() entity: Temas) {
         return this.temasService.create(entity);
+    }
+
+    @Put(':id')
+    async updateTopic(@Param('id') id: number, @Body() updateTemaDto: UpdateTemaDto) {
+        console.log('Updating Tema with ID:', id, 'Data:', updateTemaDto);
+        return this.temasService.update(id, updateTemaDto);
     }
 
     @Get('unidad/:idUnidad')

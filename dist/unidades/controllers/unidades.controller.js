@@ -17,6 +17,7 @@ const common_1 = require("@nestjs/common");
 const generic_controller_1 = require("../../generic/generic.controller");
 const unidades_entity_1 = require("../entities/unidades.entity");
 const unidades_service_1 = require("../services/unidades.service");
+const update_unidad_dto_1 = require("../dtos/update-unidad.dto");
 let UnidadesController = class UnidadesController extends generic_controller_1.GenericController {
     constructor(unidadesService) {
         super(unidadesService);
@@ -27,6 +28,9 @@ let UnidadesController = class UnidadesController extends generic_controller_1.G
     }
     async create(entity) {
         return this.unidadesService.create(entity);
+    }
+    async updateUnit(id, updateUnidadDto) {
+        return this.unidadesService.update(id, updateUnidadDto);
     }
     async findByMateria(idMateria) {
         return this.unidadesService.findByMateriaId(idMateria);
@@ -48,6 +52,14 @@ __decorate([
     __metadata("design:paramtypes", [unidades_entity_1.Unidades]),
     __metadata("design:returntype", Promise)
 ], UnidadesController.prototype, "create", null);
+__decorate([
+    (0, common_1.Put)(':id'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, update_unidad_dto_1.UpdateUnidadDto]),
+    __metadata("design:returntype", Promise)
+], UnidadesController.prototype, "updateUnit", null);
 __decorate([
     (0, common_1.Get)('materia/:idMateria'),
     __param(0, (0, common_1.Param)('idMateria')),

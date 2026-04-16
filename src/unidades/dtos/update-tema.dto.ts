@@ -3,4 +3,5 @@ export class UpdateTemaDto {
     nombre?: string;
     descripcion?: string;
     numero_tema?: number;
+    subtemas?: string[];
 }
