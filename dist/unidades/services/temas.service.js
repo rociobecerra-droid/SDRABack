@@ -36,6 +36,15 @@ let TemasService = class TemasService extends generic_service_1.GenericService {
             relations: ['objetosAprendizaje', 'unidad']
         });
     }
+    async updateTema(id, updateTemaDto) {
+        const tema = await this.temasRepository.findOne({ where: { id } });
+        if (!tema) {
+            throw new Error(`Tema with ID ${id} not found`);
+        }
+        this.temasRepository.merge(tema, updateTemaDto);
+        console.log('Merged Tema:', tema);
+        return this.temasRepository.save(tema);
+    }
 };
 TemasService = __decorate([
     (0, common_1.Injectable)(),

@@ -27,4 +27,14 @@ export class TemasService extends GenericService<Temas> {
         relations: ['objetosAprendizaje', 'unidad']
         });
     }
+
+    async updateTema(id: number, updateTemaDto: any): Promise<Temas> {
+        const tema = await this.temasRepository.findOne({ where: { id } });
+        if (!tema) {
+            throw new Error(`Tema with ID ${id} not found`);
+        }
+        this.temasRepository.merge(tema, updateTemaDto);
+        console.log('Merged Tema:', tema);
+        return this.temasRepository.save(tema);
+    }
 }

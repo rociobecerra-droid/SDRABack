@@ -31,7 +31,7 @@ let TemasController = class TemasController extends generic_controller_1.Generic
     }
     async updateTopic(id, updateTemaDto) {
         console.log('Updating Tema with ID:', id, 'Data:', updateTemaDto);
-        return this.temasService.update(id, updateTemaDto);
+        return this.temasService.updateTema(id, updateTemaDto);
     }
     async findByUnidad(idUnidad) {
         return this.temasService.findByUnidadId(idUnidad);

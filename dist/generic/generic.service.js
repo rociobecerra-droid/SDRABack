@@ -23,10 +23,7 @@ class GenericService {
         if (!info) {
             throw new common_1.NotFoundException(`Registro con id ${id} no encontrado`);
         }
-        console.log('Antes del merge:', info);
-        console.log('Datos a aplicar:', entity);
         this.repository.merge(info, entity);
-        console.log('Después del merge (info modificado):', info);
         return this.repository.save(info);
     }
     delete(id) {

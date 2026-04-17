@@ -6,4 +6,5 @@ export declare class TemasService extends GenericService<Temas> {
     constructor(temasRepository: Repository<Temas>);
     findByUnidadId(idUnidad: number): Promise<Temas[]>;
     findWithObjetos(id: number): Promise<Temas>;
+    updateTema(id: number, updateTemaDto: any): Promise<Temas>;
 }

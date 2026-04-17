@@ -23,7 +23,7 @@ export class TemasController extends GenericController<Temas, TemasService> {
     @Put(':id')
     async updateTopic(@Param('id') id: number, @Body() updateTemaDto: UpdateTemaDto) {
         console.log('Updating Tema with ID:', id, 'Data:', updateTemaDto);
-        return this.temasService.update(id, updateTemaDto);
+        return this.temasService.updateTema(id, updateTemaDto);
     }
 
     @Get('unidad/:idUnidad')
